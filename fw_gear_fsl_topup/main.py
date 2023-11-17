@@ -54,6 +54,7 @@ def run(options, gear_context):
     # Check the inputs and categorize files
     log.info('Locating opposing phase encoded fieldmap images')
     pairs = locate_fieldmap_pairs(options["fmaps"])
+    run_error = 0
 
     for imgs in pairs:
         corrected_files = []
@@ -129,6 +130,8 @@ def run(options, gear_context):
               "destination-id"]
     execute_shell(cmd, dryrun=options["dry-run"], cwd=options["work-dir"])
 
+    return run_error
+
 def locate_fieldmap_pairs(fmaps):
     # first remove the "dir" component - then look for label duplicates
     fmaps_stripped = ["_".join([x for x in s.split("_") if "dir" not in x]) for s in fmaps]
@@ -161,12 +164,12 @@ def locate_apply_to_files(options):
     for path in filelist:
         # look for the file first...
         f = searchfiles(os.path.join(parentdir, path), exit_on_errors=False)
-        if f:
+        if f[0]:
             outfiles.extend(f)
 
     if outfiles:
-        dir1 = [s for s in options["Image1"].split("_") if "dir" in s][0]
-        dir2 = [s for s in options["Image2"].split("_") if "dir" in s][0]
+        dir1 = [s for s in os.path.basename(options["Image1"]).split("_") if "dir" in s][0]
+        dir2 = [s for s in os.path.basename(options["Image2"]).split("_") if "dir" in s][0]
 
         # return a final list of files to apply topup and acquisition parameter index
         apply_to_files, acq_param_idxs = assign_acqparam_index(outfiles, dir1, dir2)

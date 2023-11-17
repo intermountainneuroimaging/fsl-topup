@@ -26,8 +26,6 @@ nipype = "^1.8.5"
 pandas = "^1.5.3"
 nitime = "^0.10.2"
 matplotlib = "^3.4.3"
-antspyx = "^0.3.8"
-
 
 
 [tool.poetry.dev-dependencies]
