@@ -7,7 +7,6 @@ import matplotlib.pyplot as pl
 import matplotlib.image as mpm
 pl.switch_backend('agg')
 
-fsldir='/usr/lib/fsl/5.0'
 log = logging.getLogger()
 
 
@@ -25,7 +24,7 @@ def bet(image,workdir,shell=False):
 
 
 
-    com_cmd = ['{}/fslstats'.format(fsldir), image, '-C']
+    com_cmd = ['{}/fslstats'.format(os.path.join(os.environ["FSLDIR"],'bin')), image, '-C']
 
     print(' '.join(com_cmd))
     com_cmd = ' '.join(com_cmd)
@@ -39,7 +38,7 @@ def bet(image,workdir,shell=False):
     center_of_mass = out.rstrip()
 
     bet_out = os.path.join(workdir, 'bet')
-    bet_cmd = ['{}/bet2'.format(fsldir), image, bet_out, '-o', '-m', '-t', '-f', '0.5', '-w', '0.4', '-c', center_of_mass]
+    bet_cmd = ['{}/bet2'.format(os.path.join(os.environ["FSLDIR"],'bin')), image, bet_out, '-o', '-m', '-t', '-f', '0.5', '-w', '0.4', '-c', center_of_mass]
     print(' '.join(bet_cmd))
     bet_cmd = ' '.join(bet_cmd)
     result = sp.Popen(bet_cmd, stdout=sp.PIPE, stderr=sp.PIPE,
@@ -151,7 +150,7 @@ def overlay(image1,image2,output,shell=False):
     print(out)
     print(err)
 
-    cmd=['{}/pngappend'.format(fsldir),os.path.join(wrkdir,'x0v.png'),'+','4',
+    cmd=['{}/pngappend'.format(os.path.join(os.environ["FSLDIR"],'bin')),os.path.join(wrkdir,'x0v.png'),'+','4',
          os.path.join(wrkdir,'y0v.png'),'+','4',
          os.path.join(wrkdir,'z0v.png'),output+'.png']
 
@@ -265,20 +264,6 @@ def generate_topup_report(original_image, corrected_image, output_base=''):
     plot_overlays([name1, name2], ['topup (red) over original', 'original (red) over topup'], report_out)
 
     return(report_out)
-
-
-
-# def debug1():
-#     background = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/Image1.nii.gz'
-#     outline = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/output/topup_corrected_nodif.nii.gz'
-#     name1 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/topup_over_orig'
-#     outline_overlay(background, outline, name1)
-#
-#     name2 = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/orig_over_topup'
-#     outline_overlay(outline, background, name2)
-#
-#     report_out = '/Users/davidparker/Documents/Flywheel/SSE/MyWork/Gears/Topup/Gear/work/report_out.png'
-#     plot_overlays([name1, name2], ['topup (red) over original', 'original (red) over topup'], report_out)
 
 
 def debug2():

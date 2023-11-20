@@ -1,31 +1,76 @@
-# This docker file will configure an environment into which the Matlab compiler
-# runtime will be installed and in which stand-alone Matlab routines (such as
-# those created with Matlab's deploytool) can be executed.
+# Creates docker container that runs flywheel denoising acompcor gear
+# Maintainer: Amy Hegarty (amy.hegarty@colorado.edu)
 #
+FROM amhe4269/fsl-base:6.0.4_inc0.1 as base
+#
+LABEL maintainer="Amy Hegarty <amy.hegarty@colorado.edu>"
 
-# First start with a python runtime
-FROM flywheel/fsl-base:5.0_1.0.0-xenial
+######################################################
+# FLYWHEEL GEAR STUFF...
 
-# This is setting things up for python
-RUN apt-get -qq update && apt-get -qq install -y \
-    software-properties-common \
-    libreadline-gplv2-dev libncursesw5-dev libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev python3-tk && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+USER root
+RUN adduser --disabled-password --gecos "Flywheel User" flywheel
 
-COPY requirements.txt ./requirements.txt
+ENV USER="flywheel"
 
-RUN . venv/bin/activate && \
-    pip install -r requirements.txt && rm -rf /root/.cache/pip
+# Add poetry oversight.
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends \
+	 git \
+     zip \
+    software-properties-common &&\
+	add-apt-repository -y 'ppa:deadsnakes/ppa' &&\
+	apt-get update && \
+	apt-get install -y --no-install-recommends python3.9\
+    python3.9-dev \
+	python3.9-venv \
+	python3-pip &&\
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Make directory for flywheel spec (v0)
-ENV FLYWHEEL /flywheel/v0
-RUN mkdir -p $FLYWHEEL
-COPY b02b0.cnf ${FLYWHEEL}/b02b0.cnf
-COPY common.py ${FLYWHEEL}/common.py
-COPY mri_qa.py ${FLYWHEEL}/mri_qa.py
-WORKDIR ${FLYWHEEL}
+# add packages required for ANTs
+#RUN apt-get install -y --no-install-recommends \
+#    libblas-dev liblapack-dev \
+#    gfortran \
+#    libpng-dev &&\
+#    apt-get clean && \
+#    rm -rf /var/lib/apt/lists/*
 
-# Save the environment for later use in the Run script (run.py)
-RUN python3.7 -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
+# Install poetry based on their preferred method. pip install is finnicky.
+# Designate the install location, so that you can find it in Docker.
+ENV PYTHONUNBUFFERED=1 \
+    POETRY_VERSION=1.7.0 \
+    # make poetry install to this location
+    POETRY_HOME="/opt/poetry" \
+    # do not ask any interactive questions
+    POETRY_NO_INTERACTION=1 \
+    VIRTUAL_ENV=/opt/venv
+RUN python3.9 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN python3.9 -m pip install --upgrade pip && \
+    ln -sf /usr/bin/python3.9 /opt/venv/bin/python3
+ENV PATH="$POETRY_HOME/bin:$PATH"
 
-COPY run.py ${FLYWHEEL}/run.py
+# get-poetry respects ENV
+RUN curl -sSL https://install.python-poetry.org | python3 - ;\
+    ln -sf ${POETRY_HOME}/lib/poetry/_vendor/py3.9 ${POETRY_HOME}/lib/poetry/_vendor/py3.8; \
+    chmod +x "$POETRY_HOME/bin/poetry"
+
+# Installing main dependencies
+ARG FLYWHEEL=/flywheel/v0
+COPY pyproject.toml poetry.lock $FLYWHEEL/
+WORKDIR $FLYWHEEL
+RUN poetry install --no-root --no-dev
+
+## Installing the current project (most likely to change, above layer can be cached)
+## Note: poetry requires a README.md to install the current project
+COPY run.py manifest.json README.md b02b0.cnf $FLYWHEEL/
+COPY fw_gear_fsl_topup $FLYWHEEL/fw_gear_fsl_topup
+COPY utils $FLYWHEEL/utils
+
+# Configure entrypoint
+RUN chmod a+x $FLYWHEEL/run.py && \
+    echo "fsl-topup" > /etc/hostname && \
+    rm -rf $HOME/.npm
+
+ENTRYPOINT ["poetry","run","python","/flywheel/v0/run.py"]
