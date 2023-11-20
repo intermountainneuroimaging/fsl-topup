@@ -30,9 +30,9 @@
   "custom": {
     "gear-builder": {
       "category": "analysis",
-      "image": "amhe4269/bids-fsl-topup:6.0.4_inc0.0rc2"
+      "image": "amhe4269/bids-fsl-topup:6.0.4_inc0.1"
     },
-    "docker-image": "amhe4269/bids-fsl-topup:6.0.4_inc0.0rc2",
+    "docker-image": "amhe4269/bids-fsl-topup:6.0.4_inc0.1",
     "flywheel": {
       "suite": "Preprocessing"
     }
